@@ -135,7 +135,7 @@ Icon
 !wrapper/*.jar
 !**/wrapper/*.jar
 
-/data
+/dataset
 /result
 /notebook
 /log-history
