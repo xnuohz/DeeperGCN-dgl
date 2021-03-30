@@ -3,53 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import dgl.function as fn
 
-from dgl.nn.functional import edge_softmax
-
-class MLP(nn.Sequential):
-    def __init__(self, channels, norm=None, dropout=0., bias=True):
-        layers = []
-        
-        for i in range(1, len(channels)):
-            layers.append(nn.Linear(channels[i - 1], channels[i], bias))
-            if i < len(channels) - 1:
-                if norm == 'batch':
-                    layers.append(nn.BatchNorm1d(channels[i], affine=True))
-                elif norm == 'layer':
-                    layers.append(nn.LayerNorm(channels[i], elementwise_affine=True))
-                elif norm == 'instance':
-                    layers.append(nn.InstanceNorm1d(channels[i], affine=False))
-                else:
-                    raise NotImplementedError(f'Normalization layer {norm} is not supported.')
-        
-                layers.append(nn.ReLU())
-                layers.append(nn.Dropout(dropout))
-        
-        super(MLP, self).__init__(*layers)
-
-
-class MessageNorm(nn.Module):
-    r"""
-    
-    Description
-    -----------
-    Message normalization was introduced in `DeeperGCN: All You Need to Train Deeper GCNs <https://arxiv.org/abs/2006.07739>`_
-
-    Parameters
-    ----------
-    learn_scale: bool
-        Whether s is a learnable scaling factor or not. Default is False.
-    """
-    def __init__(self, learn_scale=False):
-        super(MessageNorm, self).__init__()
-        self.scale = nn.Parameter(torch.FloatTensor([1.0]), requires_grad=learn_scale)
-    
-    def reset_parameters(self):
-        self.scale.data.fill_(1.0)
-
-    def forward(self, feats, msg):
-        feats = feats.norm(p=2, dim=-1, keepdim=True)
-        msg = F.normalize(msg, p=2, dim=-1)
-        return msg * feats * self.scale
+from dgl.nn.functional imoprt edge_softmax
+from modules import MLP, MessageNorm
 
 
 class GENConv(nn.Module):
@@ -66,7 +21,7 @@ class GENConv(nn.Module):
     out_dim: int
         Size of output dimension.
     aggregator: str
-        Type of aggregator scheme ('softmax', 'softmax_sg', 'power', 'sum', 'mean', 'max'), default is 'softmax'.
+        Type of aggregator scheme ('softmax', 'power'), default is 'softmax'.
     beta: float
         A continuous variable called an inverse temperature. Default is 1.0.
     learn_beta: bool
@@ -79,9 +34,13 @@ class GENConv(nn.Module):
         Whether message normalization is used. Default is False.
     learn_msg_scale: bool
         Whether s is a learnable scaling factor or not in message normalization. Default is False.
+    encode_edge: bool
+        Using edge features or not.
+    edge_feat_dim: int, optional
+        The dimension of edge features when encode_edge is True.
     norm: str
         Type of ('batch', 'layer', 'instance') norm layer in MLP layers. Default is 'batch'.
-    num_layers: int
+    mlp_layers: int
         The number of MLP layers. Default is 2.
     eps: float
         A small positive constant in message construction function. Default is 1e-7.
@@ -96,18 +55,19 @@ class GENConv(nn.Module):
                  learn_p=False,
                  msg_norm=False,
                  learn_msg_scale=False,
+                 encode_edge=False,
+                 edge_feat_dim=None,
                  norm='batch',
-                 num_layers=2,
+                 mlp_layers=2,
                  eps=1e-7):
         super(GENConv, self).__init__()
         
-        self.in_dim = in_dim
-        self.out_dim = out_dim
         self.aggr = aggregator
         self.eps = eps
+        self.encode_edge = encode_edge
 
         channels = [in_dim]
-        for i in range(num_layers - 1):
+        for i in range(mlp_layers - 1):
             channels.append(in_dim * 2)
         channels.append(out_dim)
 
@@ -117,41 +77,46 @@ class GENConv(nn.Module):
         self.beta = nn.Parameter(torch.Tensor([beta]), requires_grad=True) if learn_beta and self.aggr == 'softmax' else beta
         self.p = nn.Parameter(torch.Tensor([p]), requires_grad=True) if learn_p else p
 
-    def reset_parameters(self):
-        pass
+        if self.encode_edge:
+            self.edge_encoder = nn.Linear(edge_feat_dim, in_dim)
 
-    def msg_fn(self, edge):
-        return {'x': edge.data['m'] * edge.data['a']}
-
-    def forward(self, g, feats):
-        # Node and edge feature dimension need to match.
-        assert feats.size()[-1] == g.edata['h'].size()[-1]
-
+    def forward(self, g, node_feats, edge_feats=None):
         with g.local_scope():
-            if self.aggr == 'softmax':
-                g.ndata['h'] = feats
+            g.ndata['h'] = node_feats
+            if edge_feats is not None:
+                g.edata['h'] = edge_feats
+
+            if self.encode_edge:
+                # Node and edge feature dimension need to match.
+                g.edata['h'] = self.edge_encoder(g.edata['h'])
                 g.apply_edges(fn.u_add_e('h', 'h', 'm'))
+            else:
+                g.apply_edges(fn.copy_u('h', 'm'))
+
+            if self.aggr == 'softmax':
                 g.edata['m'] = F.relu(g.edata['m']) + self.eps
                 g.edata['a'] = edge_softmax(g, g.edata['m'] * self.beta)
-                g.update_all(self.msg_fn, fn.sum('x', 'h'))
-
-                if self.msg_norm is not None:
-                    feats = feats + self.msg_norm(feats, g.ndata['h'])
+                g.update_all(lambda edge: {'x': edge.data['m'] * edge.data['a']},
+                             fn.sum('x', 'm'))
+            
             elif self.aggr == 'power':
-                pass
-            elif self.aggr == 'sum':
-                pass
-            elif self.aggr == 'max':
-                pass
-            elif self.aggr == 'mean':
-                pass
+                minv, maxv = 1e-7, 1e1
+                torch.clamp_(g.edata['m'], minv, maxv)
+                g.update_all(lambda edge: {'x': torch.pow(edge.data['m'], self.p)},
+                             fn.mean('x', 'm'))
+                torch.clamp_(g.ndata['m'], minv, maxv)
+                g.ndata['m'] = torch.pow(g.ndata['m'], self.p)
             else:
                 raise NotImplementedError(f'Aggregator {self.aggr} is not supported.')
+            
+            feats = g.ndata['h']
+            if self.msg_norm is not None:
+                feats += self.msg_norm(g.ndata['h'], g.ndata['m'])
             
             return self.mlp(feats)
 
 
-class DeepGCNLayer(nn.Module):
+class DeeperGCNLayer(nn.Module):
     r"""
 
     Description
@@ -216,56 +181,3 @@ class DeepGCNLayer(nn.Module):
                 pass
                 
             return self.dropout(h)
-
-
-class DeeperGCN(nn.Module):
-    r"""
-
-    Description
-    -----------
-    Introduced in `DeeperGCN: All You Need to Train Deeper GCNs <https://arxiv.org/abs/2006.07739>`_
-
-    Parameters
-    ----------
-    node_dim: int
-        The input dimension of node features.
-    edge_dim: int
-        The input dimension of edge features.
-    hid_dim: int
-        Hidden layer dimension.
-    out_dim: int
-        Output layer dimension.
-    num_layers: int
-        The number of layers.
-    """
-    def __init__(self, node_dim, edge_dim, hid_dim, out_dim, num_layers):
-        super(DeeperGCN, self).__init__()
-        
-        self.node_encoder = nn.Linear(node_dim, hid_dim)
-        self.edge_encoder = nn.Linear(edge_dim, hid_dim)
-        self.layers = nn.ModuleList()
-        for i in range(num_layers):
-            conv = GENConv(hid_dim,
-                           hid_dim,
-                           aggregator='softmax',
-                           beta=1.0,
-                           learn_beta=True,
-                           num_layers=2,
-                           norm='layer')
-            norm = nn.LayerNorm(hid_dim, elementwise_affine=True)
-            activation = nn.ReLU(inplace=True)
-            layer = DeepGCNLayer(conv, norm, activation, block='res+', dropout=0.1)
-            self.layers.append(layer)
-        self.output = nn.Linear(hid_dim, out_dim)
-    
-    def forward(self, g, node_feats, edge_feats):
-        with g.local_scope():
-            g.ndata['h'] = self.node_encoder(node_feats)
-            g.edata['h'] = self.edge_encoder(edge_feats)
-
-            for layer in self.layers:
-                g.ndata['h'] = layer(g)
-
-            h = self.layers[0].activation(self.layers[0].norm(g.ndata['h']))
-            h = F.dropout(h, p=0.1)
-            return self.output(h)
