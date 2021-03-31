@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import dgl.function as fn
 
 from dgl.nn.functional import edge_softmax
-from deepergcn.modules import MLP, MessageNorm
+from modules import MLP, MessageNorm
 
 
 class GENConv(nn.Module):

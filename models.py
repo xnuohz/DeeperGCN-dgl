@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-from deepergcn.modules import norm_layer, act_layer
-from deepergcn.layers import GENConv, DeeperGCNLayer
+from modules import norm_layer, act_layer
+from layers import GENConv, DeeperGCNLayer
 
 
 class DeeperGCN(nn.Module):

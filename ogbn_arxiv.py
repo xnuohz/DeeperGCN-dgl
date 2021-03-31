@@ -8,7 +8,7 @@ import dgl
 
 from ogb.nodeproppred.dataset_dgl import DglNodePropPredDataset
 from ogb.nodeproppred import Evaluator
-from deepergcn.arxiv import DeeperGCN
+from models import DeeperGCN
 
 
 def main():

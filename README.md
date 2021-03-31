@@ -107,7 +107,7 @@ Open Graph Benchmark(OGB). Dataset summary:
 Train a model which follows the original hyperparameters on different datasets.
 ```bash
 # ogbn-arxiv
-python main.py --gpu 0 --self-loop --msg-norm --num-layers 28 --block res+ --aggr softmax --beta 0.1
+python ogbn_arxiv.py --gpu 0 --self-loop --msg-norm --num-layers 28 --block res+ --aggr softmax --beta 0.1
 ```
 
 ### Performance
