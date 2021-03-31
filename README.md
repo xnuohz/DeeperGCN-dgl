@@ -21,7 +21,7 @@ Open Graph Benchmark(OGB). Dataset summary:
 
 | Dataset | #Nodes | #Edges | #Node Feats | #Edge Feats | #Labels | #Metric |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| ogbn-proteins | 132,534 | 39,561,252 | 8(one-hot) | 8 | 2 | ROC-AUC |
+| ogbn-proteins | 132,534 | 39,561,252 | - | 8 | 2 | ROC-AUC |
 | ogbn-arxiv | 169,343 | 1,166,243 | 128 | - | 40 | Accuracy |
 
 ###### Graph Property Prediction
@@ -40,15 +40,34 @@ Open Graph Benchmark(OGB). Dataset summary:
 * DyResGEN: Norm + ReLU + DyGEN + Addition
 
 * ogbn-proteins
+  - node features is initialized via a sum aggregation of their connected edges
+  - a 112-layer DyResGEN with softmax aggregator
+  - using layer normalization
+  - hidden size is 64
+  - dropout is 0.1
+  - using Adam with lr(0.01) and epochs(1000)
 * ogbn-arxiv
-    - a 28-layer ResGEN model with softmax aggregator
-    - beta is fixed as 0.1
-    - using batch normalization
-    - hidden size is 128
-    - dropout is 0.5
-    - using Adam with lr(0.01) and epochs(500)
+  - a 28-layer ResGEN with softmax aggregator
+  - beta is fixed as 0.1
+  - using batch normalization
+  - hidden size is 128
+  - dropout is 0.5
+  - using Adam with lr(0.01) and epochs(500)
 * ogbg-ppa
+  - node features is initialized via a sum aggregation of their connected edges
+  - a 28-layer ResGEN with softmax aggregator
+  - beta is fixed as 0.1
+  - using layer normalization
+  - hidden size is 128
+  - dropout is 0.5
+  - using Adam with lr(0.01) and epochs(200)
 * ogbg-molhiv
+  - a 7-layer DyResGEN with softmax aggregator
+  - beta is learnable
+  - using batch normalization
+  - hidden size is 256
+  - dropout is 0.5
+  - using Adam with lr(0.01) and epochs(300)
 
 ### Usage
 
