@@ -68,16 +68,15 @@ Open Graph Benchmark(OGB). Dataset summary:
 
 ###### Model options
 ```
---num-layers       int     Number of GNN layers.                  Default is 3.
---mlp-layers       int     Number of MLP layers.                  Default is 1.
---hid-dim          int     Hidden channel size.                   Default is 128.
---block            str     Graph backbone block type.             Default is 'res+'.
---conv-type        str     GCNs type.                             Default is 'gen'.
---aggr             str     Type of GENConv aggregator.            Default is 'softmax'.
---aggr             str     Type of GENConv aggregator.            Default is 'softmax'.
---norm             str     Type of GENConv aggregator.            Default is 'softmax'.
---beta             float   The temperature of softmax aggregator. Default is 1.0.
---p                float   The power of power-mean aggregator.    Default is 1.0.
+--num-layers       int     Number of GNN layers.                      Default is 3.
+--mlp-layers       int     Number of MLP layers.                      Default is 1.
+--hid-dim          int     Hidden channel size.                       Default is 128.
+--block            str     Graph backbone block type.                 Default is 'res+'.
+--conv-type        str     GCNs type.                                 Default is 'gen'.
+--aggr             str     Type of GENConv aggregator.                Default is 'softmax'.
+--norm             str     Type of normalization layer.               Default is 'batch'.
+--beta             float   The temperature of softmax aggregator.     Default is 1.0.
+--p                float   The power of power-mean aggregator.        Default is 1.0.
 --learn-beta               Whether beta is a learnable weight or not.
 --learn-p                  Whether p is a learnable weight or not.
 --msg-norm                 Add Message Norm or not.
