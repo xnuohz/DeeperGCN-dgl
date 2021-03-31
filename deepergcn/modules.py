@@ -1,4 +1,7 @@
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 
 def act_layer(act_type, inplace=False, neg_slope=0.2, n_prelu=1):
     act = act_type.lower()

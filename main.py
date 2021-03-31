@@ -4,6 +4,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
 import copy
+import dgl
 
 from ogb.nodeproppred.dataset_dgl import DglNodePropPredDataset
 from ogb.nodeproppred import Evaluator
@@ -24,6 +25,10 @@ def main():
     train_idx, valid_idx, test_idx = split_idx['train'], split_idx['valid'], split_idx['test']
     
     g = g.to(device)
+
+    if args.self_loop:
+        g = dgl.add_self_loop(g)
+
     labels = labels.to(device)
     train_idx = train_idx.to(device)
     valid_idx = valid_idx.to(device)

@@ -111,7 +111,7 @@ class GENConv(nn.Module):
             
             feats = g.ndata['h']
             if self.msg_norm is not None:
-                feats += self.msg_norm(g.ndata['h'], g.ndata['m'])
+                feats = feats + self.msg_norm(g.ndata['h'], g.ndata['m'])
             
             return self.mlp(feats)
 
