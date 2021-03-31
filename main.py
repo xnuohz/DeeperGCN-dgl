@@ -20,15 +20,15 @@ def main():
     evaluator = Evaluator(name=args.dataset)
 
     g, labels = dataset[0]
+    g = dgl.to_bidirected(g, copy_ndata=True)
+    
+    if args.self_loop:
+        g = dgl.add_self_loop(g)
 
     split_idx = dataset.get_idx_split()
     train_idx, valid_idx, test_idx = split_idx['train'], split_idx['valid'], split_idx['test']
     
     g = g.to(device)
-
-    if args.self_loop:
-        g = dgl.add_self_loop(g)
-
     labels = labels.to(device)
     train_idx = train_idx.to(device)
     valid_idx = valid_idx.to(device)
