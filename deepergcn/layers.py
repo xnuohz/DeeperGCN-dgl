@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import dgl.function as fn
 
-from dgl.nn.functional imoprt edge_softmax
-from modules import MLP, MessageNorm
+from dgl.nn.functional import edge_softmax
+from deepergcn.modules import MLP, MessageNorm
 
 
 class GENConv(nn.Module):
@@ -141,7 +141,7 @@ class DeeperGCNLayer(nn.Module):
         Whether to apply dropout, default is 0.
     """
     def __init__(self, conv=None, norm=None, activation=None, block='res+', dropout=0.):
-        super(DeepGCNLayer, self).__init__()
+        super(DeeperGCNLayer, self).__init__()
 
         self.conv = conv
         self.norm = norm
@@ -152,11 +152,11 @@ class DeeperGCNLayer(nn.Module):
         self.reset_parameters()
     
     def reset_parameters(self):
-        self.conv.reset_parameters()
+        # self.conv.reset_parameters()
         self.norm.reset_parameters()
 
-    def forward(self, g):
-        h = g.ndata['h']
+    def forward(self, g, node_feats):
+        h = node_feats
         if self.block == 'res+':
             if self.norm is not None:
                 h = self.norm(h)
@@ -165,7 +165,7 @@ class DeeperGCNLayer(nn.Module):
             h = self.dropout(h)
             if self.conv is not None:
                 h = self.conv(g, h)
-            return g.ndata['h'] + h
+            return node_feats + h
         else:
             if self.conv is not None:
                 h = self.conv(g, h)
@@ -175,9 +175,9 @@ class DeeperGCNLayer(nn.Module):
                 h = self.activation(h)
 
             if self.block == 'res':
-                h = feats + h
+                h = node_feats + h
             elif self.block == 'dense':
-                h = torch.cat([x, h], dim=-1)
+                h = torch.cat([node_feats, h], dim=-1)
             elif self.block == 'plain':
                 pass
                 

@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-from modules import norm_layer, act_layer
-from layers import GENConv, DeeperGCNLayer
+from deepergcn.modules import norm_layer, act_layer
+from deepergcn.layers import GENConv, DeeperGCNLayer
 
 
 class DeeperGCN(nn.Module):
@@ -29,7 +29,7 @@ class DeeperGCN(nn.Module):
                  in_dim,
                  hid_dim,
                  out_dim,
-                 conv,
+                 conv_type,
                  aggr,
                  num_layers,
                  beta, learn_beta,
@@ -38,23 +38,29 @@ class DeeperGCN(nn.Module):
                  norm,
                  activation,
                  mlp_layers,
-                 dropout=0.
+                 dropout=0.,
                  block='res+'):
         super(DeeperGCN, self).__init__()
         
         self.node_encoder = nn.Linear(in_dim, hid_dim)
         self.layers = nn.ModuleList()
+
+        norm = norm_layer(norm, hid_dim)
+        act = act_layer(activation, inplace=True)
+
         for i in range(num_layers):
-            conv = GENConv(in_dim=hid_dim,
-                           out_dim=hid_dim,
-                           aggregator=aggr,
-                           beta=beta, learn_beta=learn_beta,
-                           p=p, learn_p=learn_p,
-                           msg_norm=msg_norm, learn_msg_scale=learn_msg_scale,
-                           norm=norm,
-                           mlp_layers=mlp_layers)
-            norm = norm_layer(norm, hid_dim)
-            act = act_layer(activation, inplace=True)
+            if conv_type == 'gen':
+                conv = GENConv(in_dim=hid_dim,
+                               out_dim=hid_dim,
+                               aggregator=aggr,
+                               beta=beta, learn_beta=learn_beta,
+                               p=p, learn_p=learn_p,
+                               msg_norm=msg_norm, learn_msg_scale=learn_msg_scale,
+                               norm=norm,
+                               mlp_layers=mlp_layers)
+            else:
+                raise NotImplementedError(f'Conv {conv_type} is not supported.')
+            
             self.layers.append(DeeperGCNLayer(conv=conv,
                                               norm=norm,
                                               activation=act,
