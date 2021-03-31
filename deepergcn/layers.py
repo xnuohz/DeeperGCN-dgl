@@ -146,7 +146,8 @@ class DeeperGCNLayer(nn.Module):
         self.conv = conv
         self.norm = norm
         self.activation = activation
-        self.block = block
+        self.block = block.lower()
+        assert self.block in ['plain', 'dense', 'res', 'res+']
         self.dropout = nn.Dropout(dropout)
         self.reset_parameters()
     

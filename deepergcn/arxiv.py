@@ -1,4 +1,8 @@
+import torch
 import torch.nn as nn
+
+from modules import norm_layer, act_layer
+from layers import GENConv, DeeperGCNLayer
 
 
 class DeeperGCN(nn.Module):
@@ -21,34 +25,50 @@ class DeeperGCN(nn.Module):
     num_layers: int
         The number of layers.
     """
-    def __init__(self, node_dim, edge_dim, hid_dim, out_dim, num_layers):
+    def __init__(self,
+                 in_dim,
+                 hid_dim,
+                 out_dim,
+                 conv,
+                 aggr,
+                 num_layers,
+                 beta, learn_beta,
+                 p, learn_p,
+                 msg_norm, learn_msg_scale,
+                 norm,
+                 activation,
+                 mlp_layers,
+                 dropout=0.
+                 block='res+'):
         super(DeeperGCN, self).__init__()
         
-        self.node_encoder = nn.Linear(node_dim, hid_dim)
-        self.edge_encoder = nn.Linear(edge_dim, hid_dim)
+        self.node_encoder = nn.Linear(in_dim, hid_dim)
         self.layers = nn.ModuleList()
         for i in range(num_layers):
-            conv = GENConv(hid_dim,
-                           hid_dim,
-                           aggregator='softmax',
-                           beta=1.0,
-                           learn_beta=True,
-                           num_layers=2,
-                           norm='layer')
-            norm = nn.LayerNorm(hid_dim, elementwise_affine=True)
-            activation = nn.ReLU(inplace=True)
-            layer = DeepGCNLayer(conv, norm, activation, block='res+', dropout=0.1)
-            self.layers.append(layer)
+            conv = GENConv(in_dim=hid_dim,
+                           out_dim=hid_dim,
+                           aggregator=aggr,
+                           beta=beta, learn_beta=learn_beta,
+                           p=p, learn_p=learn_p,
+                           msg_norm=msg_norm, learn_msg_scale=learn_msg_scale,
+                           norm=norm,
+                           mlp_layers=mlp_layers)
+            norm = norm_layer(norm, hid_dim)
+            act = act_layer(activation, inplace=True)
+            self.layers.append(DeeperGCNLayer(conv=conv,
+                                              norm=norm,
+                                              activation=act,
+                                              block=block,
+                                              dropout=dropout))
         self.output = nn.Linear(hid_dim, out_dim)
-    
-    def forward(self, g, node_feats, edge_feats):
+
+    def forward(self, g, node_feats):
         with g.local_scope():
-            g.ndata['h'] = self.node_encoder(node_feats)
-            g.edata['h'] = self.edge_encoder(edge_feats)
+            h = self.node_encoder(node_feats)
 
             for layer in self.layers:
-                g.ndata['h'] = layer(g)
+                h = layer(g, h)
+            
+            h = self.output(h)
 
-            h = self.layers[0].activation(self.layers[0].norm(g.ndata['h']))
-            h = F.dropout(h, p=0.1)
-            return self.output(h)
+            return torch.log_softmax(h, dim=-1)
