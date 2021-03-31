@@ -102,7 +102,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate.')
     parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate.')
     # model
-    parser.add_argument('--num-layers', type=int, default=3, help='Number of graph convolutional layers.')
+    parser.add_argument('--num-layers', type=int, default=3, help='Number of GNN layers.')
     parser.add_argument('--mlp-layers', type=int, default=1, help='Number of MLP layers.')
     parser.add_argument('--hid-dim', type=int, default=128, help='Hidden channel size.')
     parser.add_argument('--block', type=str, default='res+', help='Graph backbone block type {res+, res, dense, plain}.')
