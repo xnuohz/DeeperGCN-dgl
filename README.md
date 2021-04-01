@@ -108,6 +108,8 @@ Train a model which follows the original hyperparameters on different datasets.
 ```bash
 # ogbn-arxiv
 python ogbn_arxiv.py --gpu 0 --self-loop --msg-norm --num-layers 28 --block res+ --aggr softmax --beta 0.1
+# ogbg-molhiv
+python ogbg_molhiv.py --gpu 0 --msg-norm --num-layers 7 --block res+ --aggr softmax --learn-beta --dropout 0.2
 ```
 
 ### Performance
