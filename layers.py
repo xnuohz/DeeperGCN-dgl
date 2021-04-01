@@ -106,6 +106,7 @@ class GENConv(nn.Module):
                              fn.mean('x', 'm'))
                 torch.clamp_(g.ndata['m'], minv, maxv)
                 g.ndata['m'] = torch.pow(g.ndata['m'], self.p)
+            
             else:
                 raise NotImplementedError(f'Aggregator {self.aggr} is not supported.')
             
@@ -149,10 +150,6 @@ class DeeperGCNLayer(nn.Module):
         self.block = block.lower()
         assert self.block in ['plain', 'dense', 'res', 'res+']
         self.dropout = nn.Dropout(dropout)
-        self.reset_parameters()
-    
-    def reset_parameters(self):
-        # self.conv.reset_parameters()
         self.norm.reset_parameters()
 
     def forward(self, g, node_feats):

@@ -71,12 +71,17 @@ def main():
 
         model.eval()
         with torch.no_grad():
+            train_acc = evaluator.eval({
+                'y_true': labels[train_idx],
+                'y_pred': y_pred[train_idx]
+            })['acc']
+
             valid_acc = evaluator.eval({
                 'y_true': labels[valid_idx],
                 'y_pred': y_pred[valid_idx]
             })['acc']
 
-            print(f'Epoch {i} | Train Loss: {train_loss:.4f} | Valid Acc: {valid_acc:.4f}')
+            print(f'Epoch {i} | Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f} | Valid Acc: {valid_acc:.4f}')
 
             if valid_acc > best_acc:
                 best_acc = valid_acc
