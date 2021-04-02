@@ -41,7 +41,7 @@ class GENConv(nn.Module):
     norm: str
         Type of ('batch', 'layer', 'instance') norm layer in MLP layers. Default is 'batch'.
     mlp_layers: int
-        The number of MLP layers. Default is 2.
+        The number of MLP layers. Default is 1.
     eps: float
         A small positive constant in message construction function. Default is 1e-7.
     """
@@ -58,7 +58,7 @@ class GENConv(nn.Module):
                  encode_edge=False,
                  edge_feat_dim=None,
                  norm='batch',
-                 mlp_layers=2,
+                 mlp_layers=1,
                  eps=1e-7):
         super(GENConv, self).__init__()
         
@@ -152,7 +152,7 @@ class DeeperGCNLayer(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.norm.reset_parameters()
 
-    def forward(self, g, node_feats):
+    def forward(self, g, node_feats, edge_feats=None):
         h = node_feats
         if self.block == 'res+':
             if self.norm is not None:
@@ -161,11 +161,11 @@ class DeeperGCNLayer(nn.Module):
                 h = self.activation(h)
             h = self.dropout(h)
             if self.conv is not None:
-                h = self.conv(g, h)
+                h = self.conv(g, h, edge_feats)
             return node_feats + h
         else:
             if self.conv is not None:
-                h = self.conv(g, h)
+                h = self.conv(g, h, edge_feats)
             if self.norm is not None:
                 h = self.norm(h)
             if self.activation is not None:

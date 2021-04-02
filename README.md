@@ -26,10 +26,10 @@ Open Graph Benchmark(OGB). Dataset summary:
 
 ###### Graph Property Prediction
 
-| Dataset | #Graphs |
-| :-: | :-: |
+| Dataset | #Graphs | #Node Feats | #Edge Feats |
+| :-: | :-: | :-: | :-: |
 | ogbg-ppa | 158,100 |
-| ogbg-molhiv | 41,127 |
+| ogbg-molhiv | 41,127 | 9 | 3 |
 
 ### Architecture
 

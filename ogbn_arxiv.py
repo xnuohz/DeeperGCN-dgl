@@ -8,7 +8,7 @@ import dgl
 
 from ogb.nodeproppred.dataset_dgl import DglNodePropPredDataset
 from ogb.nodeproppred import Evaluator
-from models import DeeperGCN
+from models import DeeperArxiv
 
 
 def main():
@@ -38,20 +38,14 @@ def main():
     n_classes = (labels.max() + 1).item()
 
     # load model
-    model = DeeperGCN(in_dim=in_feats,
-                      hid_dim=args.hid_dim,
-                      out_dim=n_classes,
-                      conv_type=args.conv_type,
-                      aggr=args.aggr,
-                      num_layers=args.num_layers,
-                      beta=args.beta, learn_beta=args.learn_beta,
-                      p=args.p, learn_p=args.learn_p,
-                      msg_norm=args.msg_norm, learn_msg_scale=args.learn_msg_scale,
-                      norm=args.norm,
-                      activation='relu',
-                      mlp_layers=args.mlp_layers,
-                      dropout=args.dropout,
-                      block=args.block).to(device)
+    model = DeeperArxiv(in_dim=in_feats,
+                        hid_dim=args.hid_dim,
+                        out_dim=n_classes,
+                        num_layers=args.num_layers,
+                        dropout=args.dropout,
+                        beta=args.beta,
+                        msg_norm=args.msg_norm,
+                        learn_msg_scale=args.learn_msg_scale).to(device)
 
     opt = optim.Adam(model.parameters(), lr=args.lr)
 
@@ -100,9 +94,9 @@ def main():
 
 if __name__ == '__main__':
     """
-    DeepGCNs & DeeperGCN Hyperparameters
+    DeeperGCN for ogbn-arxiv Hyperparameters
     """
-    parser = argparse.ArgumentParser(description='DeepGCNs & DeeperGCN')
+    parser = argparse.ArgumentParser(description='DeeperGCN')
     # dataset
     parser.add_argument('--dataset', type=str, default='ogbn-arxiv', help='Name of OGB dataset.')
     parser.add_argument('--self-loop', action='store_true', help='Add self-loop or not.')
@@ -112,18 +106,10 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate.')
     parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate.')
     # model
-    parser.add_argument('--num-layers', type=int, default=3, help='Number of GNN layers.')
-    parser.add_argument('--mlp-layers', type=int, default=1, help='Number of MLP layers.')
     parser.add_argument('--hid-dim', type=int, default=128, help='Hidden channel size.')
-    parser.add_argument('--block', type=str, default='res+', help='Graph backbone block type {res+, res, dense, plain}.')
-    parser.add_argument('--conv-type', type=str, default='gen', help='GCNs type.')
-    parser.add_argument('--aggr', type=str, default='softmax', help='Type of GENConv aggregator {mean, max, sum, softmax, power}.')
-    parser.add_argument('--norm', type=str, default='batch', help='Type of normalization layer.')
+    parser.add_argument('--num-layers', type=int, default=3, help='Number of GNN layers.')
     # learnable parameters in aggr
     parser.add_argument('--beta', type=float, default=1.0, help='The temperature of softmax aggregator.')
-    parser.add_argument('--p', type=float, default=1.0, help='The power of power-mean aggregator.')
-    parser.add_argument('--learn-beta', action='store_true')
-    parser.add_argument('--learn-p', action='store_true')
     # message norm
     parser.add_argument('--msg-norm', action='store_true')
     parser.add_argument('--learn-msg-scale', action='store_true')
