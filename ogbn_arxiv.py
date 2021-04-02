@@ -107,9 +107,9 @@ if __name__ == '__main__':
     parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate.')
     # model
     parser.add_argument('--hid-dim', type=int, default=128, help='Hidden channel size.')
-    parser.add_argument('--num-layers', type=int, default=3, help='Number of GNN layers.')
+    parser.add_argument('--num-layers', type=int, default=28, help='Number of GNN layers.')
     # learnable parameters in aggr
-    parser.add_argument('--beta', type=float, default=1.0, help='The temperature of softmax aggregator.')
+    parser.add_argument('--beta', type=float, default=0.1, help='The temperature of softmax aggregator.')
     # message norm
     parser.add_argument('--msg-norm', action='store_true')
     parser.add_argument('--learn-msg-scale', action='store_true')

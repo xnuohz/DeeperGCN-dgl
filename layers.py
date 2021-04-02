@@ -34,10 +34,6 @@ class GENConv(nn.Module):
         Whether message normalization is used. Default is False.
     learn_msg_scale: bool
         Whether s is a learnable scaling factor or not in message normalization. Default is False.
-    encode_edge: bool
-        Using edge features or not.
-    edge_feat_dim: int, optional
-        The dimension of edge features when encode_edge is True.
     norm: str
         Type of ('batch', 'layer', 'instance') norm layer in MLP layers. Default is 'batch'.
     mlp_layers: int
@@ -55,8 +51,6 @@ class GENConv(nn.Module):
                  learn_p=False,
                  msg_norm=False,
                  learn_msg_scale=False,
-                 encode_edge=False,
-                 edge_feat_dim=None,
                  norm='batch',
                  mlp_layers=1,
                  eps=1e-7):
@@ -64,7 +58,6 @@ class GENConv(nn.Module):
         
         self.aggr = aggregator
         self.eps = eps
-        self.encode_edge = encode_edge
 
         channels = [in_dim]
         for i in range(mlp_layers - 1):
@@ -77,18 +70,13 @@ class GENConv(nn.Module):
         self.beta = nn.Parameter(torch.Tensor([beta]), requires_grad=True) if learn_beta and self.aggr == 'softmax' else beta
         self.p = nn.Parameter(torch.Tensor([p]), requires_grad=True) if learn_p else p
 
-        if self.encode_edge:
-            self.edge_encoder = nn.Linear(edge_feat_dim, in_dim)
-
     def forward(self, g, node_feats, edge_feats=None):
         with g.local_scope():
             g.ndata['h'] = node_feats
-            if edge_feats is not None:
-                g.edata['h'] = edge_feats
 
-            if self.encode_edge:
+            if edge_feats is not None:
                 # Node and edge feature dimension need to match.
-                g.edata['h'] = self.edge_encoder(g.edata['h'])
+                g.edata['h'] = edge_feats
                 g.apply_edges(fn.u_add_e('h', 'h', 'm'))
             else:
                 g.apply_edges(fn.copy_u('h', 'm'))

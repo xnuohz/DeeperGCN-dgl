@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
+from dgl.nn.pytorch.glob import SumPooling, AvgPooling, MaxPooling
 from modules import norm_layer, act_layer
 from layers import GENConv, DeeperGCNLayer
 
@@ -87,3 +89,67 @@ class DeeperArxiv(nn.Module):
             h = self.output(h)
 
             return torch.log_softmax(h, dim=-1)
+
+
+class DeeperMolhiv(nn.Module):
+    def __init__(self,
+                 node_feat_dim,
+                 edge_feat_dim,
+                 hid_dim,
+                 out_dim,
+                 num_layers,
+                 learn_beta=False,
+                 activation='relu',
+                 dropout=0.,
+                 block='res+',
+                 aggr='softmax',
+                 msg_norm=False,
+                 learn_msg_scale=False,
+                 norm='batch',
+                 pooling='mean'):
+        super(DeeperMolhiv, self).__init__()
+        
+        self.layers = nn.ModuleList()
+
+        norm = norm_layer(norm, hid_dim)
+        act = act_layer(activation, inplace=True)
+
+        for i in range(num_layers):
+            conv = GENConv(in_dim=hid_dim,
+                           out_dim=hid_dim,
+                           aggregator=aggr,
+                           learn_beta=learn_beta,
+                           msg_norm=msg_norm,
+                           learn_msg_scale=learn_msg_scale)
+            
+            self.layers.append(DeeperGCNLayer(conv=conv,
+                                              norm=norm,
+                                              activation=act,
+                                              block=block,
+                                              dropout=dropout))
+
+        self.atom_encoder = AtomEncoder(hid_dim)
+        self.bond_encoder = BondEncoder(hid_dim)
+
+        if pooling == 'sum':
+            self.pooling = SumPooling()
+        elif pooling == 'mean':
+            self.pooling = AvgPooling()
+        elif pooling == 'max':
+            self.pooling = MaxPooling()
+        else:
+            raise NotImplementedError(f'{pooling} is not supported.')
+        
+        self.output = nn.Linear(hid_dim, out_dim)
+
+    def forward(self, g, node_feats, edge_feats):
+        with g.local_scope():
+            hv = self.atom_encoder(node_feats)
+            he = self.bond_encoder(edge_feats)
+            
+            for layer in self.layers:
+                hv = layer(g, hv, he)
+            
+            hv = self.pooling(g, hv)
+
+            return self.output(hv)
