@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import dgl.function as fn
 
+from ogb.graphproppred.mol_encoder import BondEncoder
 from dgl.nn.functional import edge_softmax
 from modules import MLP, MessageNorm
 
@@ -20,6 +21,8 @@ class GENConv(nn.Module):
         Size of input dimension.
     out_dim: int
         Size of output dimension.
+    use_edge: bool
+        Whether use edge features or not. Default is False.
     aggregator: str
         Type of aggregator scheme ('softmax', 'power'), default is 'softmax'.
     beta: float
@@ -44,6 +47,7 @@ class GENConv(nn.Module):
     def __init__(self,
                  in_dim,
                  out_dim,
+                 use_edge=False,
                  aggregator='softmax',
                  beta=1.0,
                  learn_beta=False,
@@ -56,6 +60,7 @@ class GENConv(nn.Module):
                  eps=1e-7):
         super(GENConv, self).__init__()
         
+        self.use_edge = use_edge
         self.aggr = aggregator
         self.eps = eps
 
@@ -70,13 +75,16 @@ class GENConv(nn.Module):
         self.beta = nn.Parameter(torch.Tensor([beta]), requires_grad=True) if learn_beta and self.aggr == 'softmax' else beta
         self.p = nn.Parameter(torch.Tensor([p]), requires_grad=True) if learn_p else p
 
+        if self.use_edge:
+            self.bond_encoder = BondEncoder(in_dim)
+
     def forward(self, g, node_feats, edge_feats=None):
         with g.local_scope():
             g.ndata['h'] = node_feats
 
-            if edge_feats is not None:
+            if self.use_edge and edge_feats is not None:
                 # Node and edge feature dimension need to match.
-                g.edata['h'] = edge_feats
+                g.edata['h'] = self.bond_encoder(edge_feats)
                 g.apply_edges(fn.u_add_e('h', 'h', 'm'))
             else:
                 g.apply_edges(fn.copy_u('h', 'm'))
@@ -98,9 +106,10 @@ class GENConv(nn.Module):
             else:
                 raise NotImplementedError(f'Aggregator {self.aggr} is not supported.')
             
-            feats = g.ndata['h']
             if self.msg_norm is not None:
-                feats = feats + self.msg_norm(g.ndata['h'], g.ndata['m'])
+                g.ndata['m'] = self.msg_norm(node_feats, g.ndata['m'])
+            
+            feats = node_feats + g.ndata['m']
             
             return self.mlp(feats)
 

@@ -123,7 +123,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default='ogbg-molhiv', help='Name of OGB dataset.')
     # training
     parser.add_argument('--gpu', type=int, default=-1, help='GPU index.')
-    parser.add_argument('--epochs', type=int, default=500, help='Number of epochs to train.')
+    parser.add_argument('--epochs', type=int, default=300, help='Number of epochs to train.')
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate.')
     parser.add_argument('--dropout', type=float, default=0.2, help='Dropout rate.')
     parser.add_argument('--batch-size', type=int, default=32, help='Batch size.')

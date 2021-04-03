@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
+from ogb.graphproppred.mol_encoder import AtomEncoder
 from dgl.nn.pytorch.glob import SumPooling, AvgPooling, MaxPooling
 from modules import norm_layer, act_layer
 from layers import GENConv, DeeperGCNLayer
@@ -117,6 +117,7 @@ class DeeperMolhiv(nn.Module):
         for i in range(num_layers):
             conv = GENConv(in_dim=hid_dim,
                            out_dim=hid_dim,
+                           use_edge=True,
                            aggregator=aggr,
                            learn_beta=learn_beta,
                            msg_norm=msg_norm,
@@ -129,7 +130,6 @@ class DeeperMolhiv(nn.Module):
                                               dropout=dropout))
 
         self.atom_encoder = AtomEncoder(hid_dim)
-        self.bond_encoder = BondEncoder(hid_dim)
 
         if pooling == 'sum':
             self.pooling = SumPooling()
@@ -145,7 +145,7 @@ class DeeperMolhiv(nn.Module):
     def forward(self, g, node_feats, edge_feats):
         with g.local_scope():
             hv = self.atom_encoder(node_feats)
-            he = self.bond_encoder(edge_feats)
+            he = edge_feats
             
             for layer in self.layers:
                 hv = layer(g, hv, he)
