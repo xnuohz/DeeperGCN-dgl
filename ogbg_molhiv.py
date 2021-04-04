@@ -49,7 +49,7 @@ def test(model, device, data_loader, evaluator):
     return evaluator.eval({
         'y_true': y_true,
         'y_pred': y_pred
-    })
+    })['rocauc']
 
 
 def main():
@@ -90,7 +90,7 @@ def main():
                          learn_msg_scale=args.learn_msg_scale,
                          dropout=args.dropout).to(device)
 
-    opt = optim.Adam(model.parameters(), lr=args.lr)
+    opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     loss_fn = nn.BCEWithLogitsLoss()
 
     # training & validation & testing
@@ -100,8 +100,8 @@ def main():
     print('---------- Training ----------')
     for i in range(args.epochs):
         train_loss = train(model, device, train_loader, opt, loss_fn, args.grad_clip)
-        train_auc = test(model, device, train_loader, evaluator)['rocauc']
-        valid_auc = test(model, device, valid_loader, evaluator)['rocauc']
+        train_auc = test(model, device, train_loader, evaluator)
+        valid_auc = test(model, device, valid_loader, evaluator)
 
         print(f'Epoch {i} | Train Loss: {train_loss:.4f} | Train Acc: {train_auc:.4f} | Valid Acc: {valid_auc:.4f}')
 
@@ -110,7 +110,7 @@ def main():
             best_model = copy.deepcopy(model)
     
     print('---------- Testing ----------')
-    test_auc = test(best_model, device, test_loader, evaluator)['rocauc']
+    test_auc = test(best_model, device, test_loader, evaluator)
     print(f'Test AUC: {test_auc}')
 
 
@@ -125,6 +125,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=int, default=-1, help='GPU index.')
     parser.add_argument('--epochs', type=int, default=300, help='Number of epochs to train.')
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate.')
+    parser.add_argument('--weight-decay', type=float, default=0.0001, help='Weight decay.')
     parser.add_argument('--dropout', type=float, default=0.2, help='Dropout rate.')
     parser.add_argument('--batch-size', type=int, default=32, help='Batch size.')
     parser.add_argument('--grad-clip', type=float, default=0., help='Grad clip.')
