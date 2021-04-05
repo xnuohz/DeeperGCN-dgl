@@ -117,4 +117,5 @@ python ogbg_molhiv.py --gpu 0 --learn-beta --batch-size 2048 --dropout 0.2
 | Dataset | ogbn-proteins | ogbn-arxiv | ogbg-ppa | ogbg-molhiv |
 | :-: | :-: | :-: | :-: | :-: |
 | Results(Table 6) | 0.858±0.0017 | 0.719±0.0016 | 0.771±0.0071 | 0.786±0.0117 |
-| Results(DGL) |  |  |  |
+| Results(Author) |  |  |  | 0.781 |
+| Results(DGL) |  |  |  | 0.778 |
