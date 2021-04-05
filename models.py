@@ -92,69 +92,6 @@ class DeeperArxiv(nn.Module):
             return torch.log_softmax(h, dim=-1)
 
 
-# class DeeperMolhiv(nn.Module):
-#     def __init__(self,
-#                  node_feat_dim,
-#                  edge_feat_dim,
-#                  hid_dim,
-#                  out_dim,
-#                  num_layers,
-#                  learn_beta=False,
-#                  activation='relu',
-#                  dropout=0.,
-#                  block='res+',
-#                  aggr='softmax',
-#                  msg_norm=False,
-#                  learn_msg_scale=False,
-#                  norm='batch',
-#                  pooling='mean'):
-#         super(DeeperMolhiv, self).__init__()
-        
-#         self.layers = nn.ModuleList()
-
-#         norm = norm_layer(norm, hid_dim)
-#         act = act_layer(activation, inplace=True)
-
-#         for i in range(num_layers):
-#             conv = GENConv(in_dim=hid_dim,
-#                            out_dim=hid_dim,
-#                            use_edge=True,
-#                            aggregator=aggr,
-#                            learn_beta=learn_beta,
-#                            msg_norm=msg_norm,
-#                            learn_msg_scale=learn_msg_scale)
-            
-#             self.layers.append(DeeperGCNLayer(conv=conv,
-#                                               norm=norm,
-#                                               activation=act,
-#                                               block=block,
-#                                               dropout=dropout))
-
-#         self.atom_encoder = AtomEncoder(hid_dim)
-
-#         if pooling == 'sum':
-#             self.pooling = SumPooling()
-#         elif pooling == 'mean':
-#             self.pooling = AvgPooling()
-#         elif pooling == 'max':
-#             self.pooling = MaxPooling()
-#         else:
-#             raise NotImplementedError(f'{pooling} is not supported.')
-        
-#         self.output = nn.Linear(hid_dim, out_dim)
-
-#     def forward(self, g, node_feats, edge_feats):
-#         with g.local_scope():
-#             hv = self.atom_encoder(node_feats)
-#             he = edge_feats
-            
-#             for layer in self.layers:
-#                 hv = layer(g, hv, he)
-            
-#             hv = self.pooling(g, hv)
-
-#             return self.output(hv)
-
 class DeeperMolhiv(nn.Module):
     def __init__(self,
                  node_feat_dim,
@@ -208,16 +145,12 @@ class DeeperMolhiv(nn.Module):
             hv = self.atom_encoder(node_feats)
             he = edge_feats
 
-            hv = self.gcns[0](g, hv, he)
-            
-            for layer in range(1, self.num_layers):
-                hv1 = self.norms[layer - 1](hv)
-                hv2 = F.relu(hv1)
-                hv2 = F.dropout(hv2, p=self.dropout, training=self.training)
-                hv = self.gcns[layer](g, hv2, he) + hv
-            
-            hv = self.norms[self.num_layers - 1](hv)
-            hv = F.dropout(hv, p=self.dropout, training=self.training)
+            for layer in range(self.num_layers):
+                hv1 = self.norms[layer](hv)
+                hv1 = F.relu(hv1)
+                hv1 = F.dropout(hv1, p=self.dropout, training=self.training)
+                hv = self.gcns[layer](g, hv1, he) + hv
+
             h_g = self.pooling(g, hv)
 
             return self.output(h_g)

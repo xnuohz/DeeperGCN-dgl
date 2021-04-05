@@ -109,7 +109,7 @@ Train a model which follows the original hyperparameters on different datasets.
 # ogbn-arxiv
 python ogbn_arxiv.py --gpu 0 --self-loop --msg-norm
 # ogbg-molhiv
-python ogbg_molhiv.py --gpu 0 --learn-beta
+python ogbg_molhiv.py --gpu 0 --learn-beta --batch-size 2048 --dropout 0.2
 ```
 
 ### Performance

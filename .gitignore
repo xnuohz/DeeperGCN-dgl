@@ -136,9 +136,6 @@ Icon
 !**/wrapper/*.jar
 
 /dataset
-/result
-/notebook
-/log-history
-/pretrained
+/ckpt
 __pycache__/
 *.lprof

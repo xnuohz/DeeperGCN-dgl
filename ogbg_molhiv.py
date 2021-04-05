@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import copy
+import dgl
 
 from ogb.graphproppred import DglGraphPropPredDataset, collate_dgl
 from torch.utils.data import DataLoader
@@ -90,6 +91,8 @@ def main():
                          learn_msg_scale=args.learn_msg_scale,
                          dropout=args.dropout).to(device)
 
+    print(model)
+    
     opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     loss_fn = nn.BCEWithLogitsLoss()
 
@@ -126,7 +129,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=300, help='Number of epochs to train.')
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate.')
     parser.add_argument('--weight-decay', type=float, default=0.0001, help='Weight decay.')
-    parser.add_argument('--dropout', type=float, default=0.2, help='Dropout rate.')
+    parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate.')
     parser.add_argument('--batch-size', type=int, default=32, help='Batch size.')
     parser.add_argument('--grad-clip', type=float, default=0., help='Grad clip.')
     # model
