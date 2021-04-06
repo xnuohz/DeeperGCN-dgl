@@ -74,7 +74,8 @@ class DeeperGCN(nn.Module):
                            aggregator=aggr,
                            beta=beta,
                            learn_beta=learn_beta,
-                           mlp_layers=mlp_layers)
+                           mlp_layers=mlp_layers,
+                           norm=norm)
             
             self.gcns.append(conv)
             self.norms.append(norm_layer(norm, hid_dim))
@@ -102,12 +103,13 @@ class DeeperGCN(nn.Module):
         with g.local_scope():
             if self.dataset == 'ogbg-molhiv':
                 hv = self.node_encoder(node_feats)
+                he = edge_feats
             else:
                 # node features are initialized via a Sum aggr in ogbg-ppa
                 g.edata['h'] = edge_feats
                 g.update_all(fn.copy_e('h', 'm'), fn.sum('m', 'h'))
-                hv = self.node_encode(g.ndata['h'])
-            he = edge_feats
+                hv = self.node_encoder(g.ndata['h'])
+                he = self.edge_encoder(edge_feats)
 
             for layer in range(self.num_layers):
                 hv1 = self.norms[layer](hv)
