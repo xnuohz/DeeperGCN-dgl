@@ -26,10 +26,10 @@ Open Graph Benchmark(OGB). Dataset summary:
 
 ###### Graph Property Prediction
 
-| Dataset | #Graphs | #Node Feats | #Edge Feats |
-| :-: | :-: | :-: | :-: |
-| ogbg-ppa | 158,100 |
-| ogbg-molhiv | 41,127 | 9 | 3 |
+| Dataset | #Graphs | #Node Feats | #Edge Feats | Metric |
+| :-: | :-: | :-: | :-: | :-: |
+| ogbg-ppa | 158,100 | - | 7 | Accuracy |
+| ogbg-molhiv | 41,127 | 9 | 3 | ROC-AUC |
 
 ### Architecture
 
@@ -106,10 +106,10 @@ Open Graph Benchmark(OGB). Dataset summary:
 
 Train a model which follows the original hyperparameters on different datasets.
 ```bash
-# ogbn-arxiv
-python ogbn_arxiv.py --gpu 0 --self-loop --msg-norm
 # ogbg-molhiv
 python ogbg_molhiv.py --gpu 0 --learn-beta --batch-size 2048 --dropout 0.2
+# ogbg-ppa
+python ogbg_ppa.py --gpu 0
 ```
 
 ### Performance
