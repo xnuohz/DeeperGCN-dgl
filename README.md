@@ -71,39 +71,6 @@ Open Graph Benchmark(OGB). Dataset summary:
 
 ### Usage
 
-###### Dataset options
-```
---dataset          str     The graph dataset name.             Default is 'ogbn-arxiv'.
---self-loop                Add self-loop or not.               
-```
-
-###### Training options
-```
---gpu              int     GPU index.                          Default is -1, using CPU.
---epochs           int     Number of epochs to train.          Default is 500.
---lr               float   Learning rate.                      Default is 0.01.
---dropout          float   Dropout rate.                       Default is 0.5.
-```
-
-###### Model options
-```
---num-layers       int     Number of GNN layers.                      Default is 3.
---mlp-layers       int     Number of MLP layers.                      Default is 1.
---hid-dim          int     Hidden channel size.                       Default is 128.
---block            str     Graph backbone block type.                 Default is 'res+'.
---conv-type        str     GCNs type.                                 Default is 'gen'.
---aggr             str     Type of GENConv aggregator.                Default is 'softmax'.
---norm             str     Type of normalization layer.               Default is 'batch'.
---beta             float   The temperature of softmax aggregator.     Default is 1.0.
---p                float   The power of power-mean aggregator.        Default is 1.0.
---learn-beta               Whether beta is a learnable weight or not.
---learn-p                  Whether p is a learnable weight or not.
---msg-norm                 Add Message Norm or not.
---learn-msg-scale          Whether s is a learnable weight or not.
-```
-
-###### Examples
-
 Train a model which follows the original hyperparameters on different datasets.
 ```bash
 # ogbg-molhiv

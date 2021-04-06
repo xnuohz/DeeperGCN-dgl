@@ -24,10 +24,6 @@ def train(model, device, data_loader, opt, loss_fn, grad_clip=0.):
         
         opt.zero_grad()
         loss.backward()
-
-        if grad_clip > 0:
-            nn.utils.clip_grad_value_(model.parameters(), grad_clip)
-        
         opt.step()
 
     return sum(train_loss) / len(train_loss)
@@ -129,7 +125,6 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate.')
     parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate.')
     parser.add_argument('--batch-size', type=int, default=32, help='Batch size.')
-    parser.add_argument('--grad-clip', type=float, default=0., help='Grad clip.')
     # model
     parser.add_argument('--num-layers', type=int, default=7, help='Number of GNN layers.')
     parser.add_argument('--hid-dim', type=int, default=256, help='Hidden channel size.')
