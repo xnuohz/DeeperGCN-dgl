@@ -1,14 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import dgl.function as fn
 
 from ogb.graphproppred.mol_encoder import AtomEncoder
 from dgl.nn.pytorch.glob import SumPooling, AvgPooling, MaxPooling
-from modules import norm_layer, act_layer
-from layers import GENConv, DeeperGCNLayer
+from modules import norm_layer
+from layers import GENConv
 
 
-class DeeperArxiv(nn.Module):
+class DeeperGCN(nn.Module):
     r"""
 
     Description
@@ -17,117 +18,74 @@ class DeeperArxiv(nn.Module):
 
     Parameters
     ----------
-    in_dim: int
-        Size of input dimension.
+    dataset: str
+        Name of ogb dataset.
+    node_feat_dim: int
+        Size of node feature dimension.
+    edge_feat_dim: int
+        Size of edge feature dimension.
     hid_dim: int
         Size of hidden dimension.
     out_dim: int
         Size of output dimension.
     num_layers: int
         Number of graph convolutional layers.
-    activation: str
-        Activation function of graph convolutional layer.
     dropout: float
         Dropout rate. Default is 0.
-    block: str
-        The skip connection operation to use.
-        You can chose from set ['plain', 'dense', 'res', 'res+'], default is 'res+'.
-    aggr: str
-        Type of aggregator scheme ('softmax', 'power'), default is 'softmax'.
-    beta: float
-        A continuous variable called an inverse temperature. Default is 1.0.
-    msg_norm: bool
-        Whether message normalization is used. Default is True.
-    learn_msg_scale: bool
-        Whether s is a learnable scaling factor or not in message normalization. Default is False.
     norm: str
         Type of ('batch', 'layer', 'instance') norm layer in MLP layers. Default is 'batch'.
+    pooling: str
+        Type of ('sum', 'mean', 'max') pooling layer. Default is 'mean'.
+    beta: float
+        A continuous variable called an inverse temperature. Default is 1.0.
+    lean_beta: bool
+        Whether beta is a learnable weight. Default is False.
+    aggr: str
+        Type of aggregator scheme ('softmax', 'power'). Default is 'softmax'.
+    mlp_layers: int
+        Number of MLP layers in message normalization. Default is 1.
     """
     def __init__(self,
-                 in_dim,
-                 hid_dim,
-                 out_dim,
-                 num_layers,
-                 activation='relu',
-                 dropout=0.,
-                 block='res+',
-                 aggr='softmax',
-                 beta=1.0,
-                 msg_norm=False,
-                 learn_msg_scale=False,
-                 norm='batch'):
-        super(DeeperArxiv, self).__init__()
-        
-        self.node_encoder = nn.Linear(in_dim, hid_dim)
-        self.layers = nn.ModuleList()
-
-        norm = norm_layer(norm, hid_dim)
-        act = act_layer(activation, inplace=True)
-
-        for i in range(num_layers):
-            conv = GENConv(in_dim=hid_dim,
-                           out_dim=hid_dim,
-                           aggregator=aggr,
-                           beta=beta,
-                           msg_norm=msg_norm,
-                           learn_msg_scale=learn_msg_scale)
-            
-            self.layers.append(DeeperGCNLayer(conv=conv,
-                                              norm=norm,
-                                              activation=act,
-                                              block=block,
-                                              dropout=dropout))
-
-        self.output = nn.Linear(hid_dim, out_dim)
-
-    def forward(self, g, node_feats):
-        with g.local_scope():
-            h = self.node_encoder(node_feats)
-
-            for layer in self.layers:
-                h = layer(g, h)
-            
-            h = self.output(h)
-
-            return torch.log_softmax(h, dim=-1)
-
-
-class DeeperMolhiv(nn.Module):
-    def __init__(self,
+                 dataset,
                  node_feat_dim,
                  edge_feat_dim,
                  hid_dim,
                  out_dim,
                  num_layers,
-                 learn_beta=False,
-                 activation='relu',
                  dropout=0.,
-                 block='res+',
-                 aggr='softmax',
-                 msg_norm=False,
-                 learn_msg_scale=False,
                  norm='batch',
-                 pooling='mean'):
-        super(DeeperMolhiv, self).__init__()
+                 pooling='mean',
+                 beta=1.0,
+                 learn_beta=False,
+                 aggr='softmax',
+                 mlp_layers=1):
+        super(DeeperGCN, self).__init__()
         
+        self.dataset = dataset
         self.num_layers = num_layers
         self.dropout = dropout
         self.gcns = nn.ModuleList()
         self.norms = nn.ModuleList()
 
         for i in range(self.num_layers):
-            conv = GENConv(in_dim=hid_dim,
+            conv = GENConv(dataset=dataset,
+                           in_dim=hid_dim,
                            out_dim=hid_dim,
-                           use_edge=True,
                            aggregator=aggr,
+                           beta=beta,
                            learn_beta=learn_beta,
-                           msg_norm=msg_norm,
-                           learn_msg_scale=learn_msg_scale)
+                           mlp_layers=mlp_layers)
             
             self.gcns.append(conv)
             self.norms.append(norm_layer(norm, hid_dim))
 
-        self.atom_encoder = AtomEncoder(hid_dim)
+        if self.dataset == 'ogbg-molhiv':
+            self.node_encoder = AtomEncoder(hid_dim)
+        elif self.dataset == 'ogbg-ppa':
+            self.node_encoder = nn.Linear(node_feat_dim, hid_dim)
+            self.edge_encoder = nn.Linear(edge_feat_dim, hid_dim)
+        else:
+            raise ValueError(f'Dataset {dataset} is not supported.')
 
         if pooling == 'sum':
             self.pooling = SumPooling()
@@ -140,9 +98,15 @@ class DeeperMolhiv(nn.Module):
         
         self.output = nn.Linear(hid_dim, out_dim)
 
-    def forward(self, g, node_feats, edge_feats):
+    def forward(self, g, edge_feats, node_feats=None):
         with g.local_scope():
-            hv = self.atom_encoder(node_feats)
+            if self.dataset == 'ogbg-molhiv':
+                hv = self.node_encoder(node_feats)
+            else:
+                # node features are initialized via a Sum aggr in ogbg-ppa
+                g.edata['h'] = edge_feats
+                g.update_all(fn.copy_e('h', 'm'), fn.sum('m', 'h'))
+                hv = self.node_encode(g.ndata['h'])
             he = edge_feats
 
             for layer in range(self.num_layers):

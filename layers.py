@@ -17,12 +17,12 @@ class GENConv(nn.Module):
 
     Parameters
     ----------
+    dataset: str
+        Name of ogb dataset.
     in_dim: int
         Size of input dimension.
     out_dim: int
         Size of output dimension.
-    use_edge: bool
-        Whether use edge features or not. Default is False.
     aggregator: str
         Type of aggregator scheme ('softmax', 'power'), default is 'softmax'.
     beta: float
@@ -45,9 +45,9 @@ class GENConv(nn.Module):
         A small positive constant in message construction function. Default is 1e-7.
     """
     def __init__(self,
+                 dataset,
                  in_dim,
                  out_dim,
-                 use_edge=False,
                  aggregator='softmax',
                  beta=1.0,
                  learn_beta=False,
@@ -60,7 +60,6 @@ class GENConv(nn.Module):
                  eps=1e-7):
         super(GENConv, self).__init__()
         
-        self.use_edge = use_edge
         self.aggr = aggregator
         self.eps = eps
 
@@ -75,19 +74,19 @@ class GENConv(nn.Module):
         self.beta = nn.Parameter(torch.Tensor([beta]), requires_grad=True) if learn_beta and self.aggr == 'softmax' else beta
         self.p = nn.Parameter(torch.Tensor([p]), requires_grad=True) if learn_p else p
 
-        if self.use_edge:
-            self.bond_encoder = BondEncoder(in_dim)
+        if dataset == 'ogbg-molhiv':
+            self.edge_encoder = BondEncoder(in_dim)
+        elif dataset == 'ogbg-ppa':
+            self.edge_encoder = nn.Linear(in_dim, in_dim)
+        else:
+            raise ValueError(f'Dataset {dataset} is not supported.')
 
-    def forward(self, g, node_feats, edge_feats=None):
+    def forward(self, g, node_feats, edge_feats):
         with g.local_scope():
+            # Node and edge feature dimension need to match.
             g.ndata['h'] = node_feats
-
-            if self.use_edge and edge_feats is not None:
-                # Node and edge feature dimension need to match.
-                g.edata['h'] = self.bond_encoder(edge_feats)
-                g.apply_edges(fn.u_add_e('h', 'h', 'm'))
-            else:
-                g.apply_edges(fn.copy_u('h', 'm'))
+            g.edata['h'] = self.edge_encoder(edge_feats)
+            g.apply_edges(fn.u_add_e('h', 'h', 'm'))
 
             if self.aggr == 'softmax':
                 g.edata['m'] = F.relu(g.edata['m']) + self.eps
@@ -112,67 +111,3 @@ class GENConv(nn.Module):
             feats = node_feats + g.ndata['m']
             
             return self.mlp(feats)
-
-
-class DeeperGCNLayer(nn.Module):
-    r"""
-
-    Description
-    -----------
-    Graph convolution architecture was introduced in:
-
-    - `DeepGCNs: Can GCNs Go as Deep as CNNs? <https://arxiv.org/abs/1904.03751>`_,
-    - `DeeperGCN: All You Need to Train Deeper GCNs <https://arxiv.org/abs/2006.07739>`_
-
-    Parameters
-    ----------
-    conv: torch.nn.Module
-        The graph convolutional layer.
-    norm: torch.nn.Module
-        The normalization layer.
-    activation: torch.nn.Module
-        The activation function.
-    block: str, optional
-        The skip connection operation to use. 
-        You can chose from set ['plain', 'dense', 'res', 'res+'], default is 'res+'.
-    dropout: float, optional
-        Whether to apply dropout, default is 0.
-    """
-    def __init__(self, conv=None, norm=None, activation=None, block='res+', dropout=0.):
-        super(DeeperGCNLayer, self).__init__()
-
-        self.conv = conv
-        self.norm = norm
-        self.activation = activation
-        self.block = block.lower()
-        assert self.block in ['plain', 'dense', 'res', 'res+']
-        self.dropout = nn.Dropout(dropout)
-        self.norm.reset_parameters()
-
-    def forward(self, g, node_feats, edge_feats=None):
-        h = node_feats
-        if self.block == 'res+':
-            if self.norm is not None:
-                h = self.norm(h)
-            if self.activation is not None:
-                h = self.activation(h)
-            h = self.dropout(h)
-            if self.conv is not None:
-                h = self.conv(g, h, edge_feats)
-            return node_feats + h
-        else:
-            if self.conv is not None:
-                h = self.conv(g, h, edge_feats)
-            if self.norm is not None:
-                h = self.norm(h)
-            if self.activation is not None:
-                h = self.activation(h)
-
-            if self.block == 'res':
-                h = node_feats + h
-            elif self.block == 'dense':
-                h = torch.cat([node_feats, h], dim=-1)
-            elif self.block == 'plain':
-                pass
-                
-            return self.dropout(h)

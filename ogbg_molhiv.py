@@ -8,7 +8,7 @@ import dgl
 from ogb.graphproppred import DglGraphPropPredDataset, collate_dgl
 from torch.utils.data import DataLoader
 from ogb.graphproppred import Evaluator
-from models import DeeperMolhiv
+from models import DeeperGCN
 
 
 def train(model, device, data_loader, opt, loss_fn, grad_clip=0.):
@@ -18,7 +18,7 @@ def train(model, device, data_loader, opt, loss_fn, grad_clip=0.):
     for g, labels in data_loader:
         g = g.to(device)
         labels = labels.to(torch.float32).to(device)
-        logits = model(g, g.ndata['feat'], g.edata['feat'])
+        logits = model(g, g.edata['feat'], g.ndata['feat'])
         loss = loss_fn(logits, labels)
         train_loss.append(loss.item())
         
@@ -40,7 +40,7 @@ def test(model, device, data_loader, evaluator):
 
     for g, labels in data_loader:
         g = g.to(device)
-        logits = model(g, g.ndata['feat'], g.edata['feat'])
+        logits = model(g, g.edata['feat'], g.ndata['feat'])
         y_true.append(labels.detach().cpu())
         y_pred.append(logits.detach().cpu())
     
@@ -81,19 +81,18 @@ def main():
                              collate_fn=collate_dgl)
 
     # load model
-    model = DeeperMolhiv(node_feat_dim=node_feat_dim,
-                         edge_feat_dim=edge_feat_dim,
-                         hid_dim=args.hid_dim,
-                         out_dim=n_classes,
-                         num_layers=args.num_layers,
-                         learn_beta=args.learn_beta,
-                         msg_norm=args.msg_norm,
-                         learn_msg_scale=args.learn_msg_scale,
-                         dropout=args.dropout).to(device)
+    model = DeeperGCN(dataset=args.dataset,
+                      node_feat_dim=node_feat_dim,
+                      edge_feat_dim=edge_feat_dim,
+                      hid_dim=args.hid_dim,
+                      out_dim=n_classes,
+                      num_layers=args.num_layers,
+                      dropout=args.dropout,
+                      learn_beta=args.learn_beta).to(device)
 
     print(model)
     
-    opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    opt = optim.Adam(model.parameters(), lr=args.lr)
     loss_fn = nn.BCEWithLogitsLoss()
 
     # training & validation & testing
@@ -106,7 +105,7 @@ def main():
         train_auc = test(model, device, train_loader, evaluator)
         valid_auc = test(model, device, valid_loader, evaluator)
 
-        print(f'Epoch {i} | Train Loss: {train_loss:.4f} | Train Acc: {train_auc:.4f} | Valid Acc: {valid_auc:.4f}')
+        print(f'Epoch {i} | Train Loss: {train_loss:.4f} | Train Auc: {train_auc:.4f} | Valid Auc: {valid_auc:.4f}')
 
         if valid_auc > best_auc:
             best_auc = valid_auc
@@ -114,7 +113,7 @@ def main():
     
     print('---------- Testing ----------')
     test_auc = test(best_model, device, test_loader, evaluator)
-    print(f'Test AUC: {test_auc}')
+    print(f'Test Auc: {test_auc}')
 
 
 if __name__ == '__main__':
@@ -128,7 +127,6 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=int, default=-1, help='GPU index.')
     parser.add_argument('--epochs', type=int, default=300, help='Number of epochs to train.')
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate.')
-    parser.add_argument('--weight-decay', type=float, default=0.0001, help='Weight decay.')
     parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate.')
     parser.add_argument('--batch-size', type=int, default=32, help='Batch size.')
     parser.add_argument('--grad-clip', type=float, default=0., help='Grad clip.')
@@ -137,9 +135,6 @@ if __name__ == '__main__':
     parser.add_argument('--hid-dim', type=int, default=256, help='Hidden channel size.')
     # learnable parameters in aggr
     parser.add_argument('--learn-beta', action='store_true')
-    # message norm
-    parser.add_argument('--msg-norm', action='store_true')
-    parser.add_argument('--learn-msg-scale', action='store_true')
 
     args = parser.parse_args()
     print(args)
