@@ -1,6 +1,6 @@
 # DGL Implementation of DeeperGCN
 
-This DGL example implements the GNN model proposed in the paper [DeeperGCN: All You Need to Train Deeper GCNs](https://arxiv.org/abs/1905.00067). For the original implementation, see [here](https://github.com/lightaime/deep_gcns_torch).
+This DGL example implements the GNN model proposed in the paper [DeeperGCN: All You Need to Train Deeper GCNs](https://arxiv.org/abs/2006.07739). For the original implementation, see [here](https://github.com/lightaime/deep_gcns_torch).
 
 Contributor: [xnuohz](https://github.com/xnuohz)
 
@@ -19,17 +19,17 @@ Open Graph Benchmark(OGB). Dataset summary:
 
 ###### Node Property Prediction
 
-| Dataset | #Nodes | #Edges | #Node Feats | #Edge Feats | #Labels | #Metric |
-| :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| ogbn-proteins | 132,534 | 39,561,252 | - | 8 | 2 | ROC-AUC |
-| ogbn-arxiv | 169,343 | 1,166,243 | 128 | - | 40 | Accuracy |
+|    Dataset    | #Nodes  |   #Edges   | #Node Feats | #Edge Feats | #Labels | #Metric  |
+| :-----------: | :-----: | :--------: | :---------: | :---------: | :-----: | :------: |
+| ogbn-proteins | 132,534 | 39,561,252 |      -      |      8      |    2    | ROC-AUC  |
+|  ogbn-arxiv   | 169,343 | 1,166,243  |     128     |      -      |   40    | Accuracy |
 
 ###### Graph Property Prediction
 
-| Dataset | #Graphs | #Node Feats | #Edge Feats | Metric |
-| :-: | :-: | :-: | :-: | :-: |
-| ogbg-ppa | 158,100 | - | 7 | Accuracy |
-| ogbg-molhiv | 41,127 | 9 | 3 | ROC-AUC |
+|   Dataset   | #Graphs | #Node Feats | #Edge Feats |  Metric  |
+| :---------: | :-----: | :---------: | :---------: | :------: |
+|  ogbg-ppa   | 158,100 |      -      |      7      | Accuracy |
+| ogbg-molhiv | 41,127  |      9      |      3      | ROC-AUC  |
 
 ### Architecture
 
@@ -81,8 +81,8 @@ python ogbg_ppa.py --gpu 0
 
 ### Performance
 
-| Dataset | ogbn-proteins | ogbn-arxiv | ogbg-ppa | ogbg-molhiv |
-| :-: | :-: | :-: | :-: | :-: |
-| Results(Table 6) | 0.858±0.0017 | 0.719±0.0016 | 0.771±0.0071 | 0.786±0.0117 |
-| Results(Author) |  |  |  | 0.781 |
-| Results(DGL) |  |  |  | 0.778 |
+|     Dataset      | ogbn-proteins |  ogbn-arxiv  |   ogbg-ppa   | ogbg-molhiv  |
+| :--------------: | :-----------: | :----------: | :----------: | :----------: |
+| Results(Table 6) | 0.858±0.0017  | 0.719±0.0016 | 0.771±0.0071 | 0.786±0.0117 |
+| Results(Author)  |               |              |              |    0.781     |
+|   Results(DGL)   |               |              |              |    0.778     |
