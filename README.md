@@ -86,3 +86,10 @@ python ogbg_ppa.py --gpu 0
 | Results(Table 6) | 0.858±0.0017  | 0.719±0.0016 | 0.771±0.0071 | 0.786±0.0117 |
 | Results(Author)  |               |              |              |    0.781     |
 |   Results(DGL)   |               |              |              |    0.778     |
+
+### Speed
+
+|     Dataset     | ogbg-molhiv |
+| :-------------: | :---------: |
+| Results(Author) |   11.833    |
+|  Results(DGL)   |    8.965    |
